@@ -301,7 +301,6 @@ class board:
         event = threading.Event()
         event.set()
         for ball_ in self.balls.sprites():
-            time.sleep(0.8)
             event.wait(timeout=0.08)
             ball_.center = pyg.math.Vector2(ball.ball.terminus.x, ball.ball.terminus.y)
             ball_.launch()
