@@ -30,7 +30,7 @@ class ball(pyg.sprite.Sprite):
         display_surface = pyg.display.get_surface()
         gfxdraw.aacircle     (display_surface, int(self.center.x), int(self.center.y), measures.radius, (255,255,255))
         gfxdraw.filled_circle(display_surface, int(self.center.x), int(self.center.y), measures.radius, (255,255,255))
-        rect = pyg.Rect(0, 0, measures.radius, measures.radius)
+        rect = pyg.Rect(0, 0, measures.radius*2+1, measures.radius*2+1)
         rect.center = self.center
         return rect
 
@@ -65,15 +65,21 @@ class ball(pyg.sprite.Sprite):
                     ball.first = True
                     ball.new_terminus_x = self.center.x
 
-        elif not self.launching and self.center != pyg.math.Vector2(ball.new_terminus_x, ball.terminus.y):
+        elif not self.launching and not self.at_terminus():
             #Once the ball hits the ground, slide it over to new_terminus_x
-            if abs(self.center.x - ball.new_terminus_x) < ball.speed/2:
+            if abs(self.center.x - ball.new_terminus_x) < ball.speed*step/2:
                 self.center = pyg.math.Vector2(ball.new_terminus_x, ball.terminus.y)
             if self.center.x < ball.new_terminus_x:
-                self.center = pyg.math.Vector2(self.center.x + ball.speed, ball.terminus.y)
+                self.center = pyg.math.Vector2(self.center.x + ball.speed*step, ball.terminus.y)
             elif self.center.x > ball.new_terminus_x:
-                self.center = pyg.math.Vector2(self.center.x - ball.speed, ball.terminus.y) 
+                self.center = pyg.math.Vector2(self.center.x - ball.speed*step, ball.terminus.y) 
     
+    def at_terminus(self):
+        if self.center == pyg.math.Vector2(ball.new_terminus_x, ball.terminus.y):
+            return True
+        else:
+            return False
+
     def change_vector(self, angle):
         """Takes input angle and updates the direction vector"""
         self.vector = pyg.math.Vector2(math.cos(angle), math.sin(angle))

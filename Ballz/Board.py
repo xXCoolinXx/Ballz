@@ -10,6 +10,7 @@ import os
 import json
 import measures
 import threading
+import time
 pyg.font.init()
 
 def pointOfIntersect(r_center, r_size, c_center):
@@ -33,6 +34,8 @@ def pointOfIntersect(r_center, r_size, c_center):
 
 class board:
     def __init__(self):
+        self.step = 1/60 
+
         #set up the borders
         self.balls = pyg.sprite.Group() 
     
@@ -62,7 +65,7 @@ class board:
 
         #button that, when pressed, speeds up the balls
         self.speed_button = button.button_image(0, 0, "Images/Lightning.png", "Images/LightningPressed.png", pyg.Color(255,255,255))
-        self.loop_count = 2
+        self.loop_count = 1
     
         self.balls_grounded = True
         #Reads from the file. If it doesn't find a board.json, it simply adds a new row.
@@ -105,7 +108,7 @@ class board:
     def new_level(self):
         self.speed_button.clear_state()
         ball.ball.prepare_launch() #resets first
-        self.loop_count = 2
+        self.loop_count = 1
         self.game_level += 1 
         self.update_level_text()
         self.ball_count = len(self.balls) #reset ball_count
@@ -125,8 +128,12 @@ class board:
 
     def draw(self):
         rect_list = []
+        ground_drawn = False
         for ball_ in self.balls:
-            rect_list.append(ball_.draw())
+            if ball_.moving or ball_.launching or not ball_.at_terminus() or not ground_drawn:
+                rect_list.append(ball_.draw())
+                if not ground_drawn:
+                    ground_drawn = True
         for row in self.board_row:
             for sprite in row:
                 rect_list.append(sprite.draw())
@@ -142,8 +149,13 @@ class board:
             rect_list.append(self.speed_button.regular.get_rect())
         rect_list += self.draw_text()
         return rect_list
-            
+
+    def loop_n(self, step):
+        for _ in range(self.loop_count):
+            self.loop(step)
+
     def loop(self, step):
+        self.step = step
         #Set it to be false
         self.array_moving = False
 
@@ -160,7 +172,7 @@ class board:
 
             
             if i != 7: #If i == 7 then there are boxes in the last row, at which point the game is already over.
-                print(self.board_row[i], self.ball_row[i])
+                #print(self.board_row[i], self.ball_row[i])
                 group_collide(self.ball_row[i], self.board_row[i], False, False, collided=collision_)
 
         self.balls.update(step)
@@ -177,7 +189,7 @@ class board:
 
         #check if speed_button has been pressed
         if not self.balls_grounded and self.speed_button.update():
-            self.loop_count = 4
+            self.loop_count = 2
 
         #if thread is true, the function returns true and the game loop starts a new thread using initiaite_launch which launches 
         #the balls at a set interval
@@ -186,6 +198,7 @@ class board:
             ball.ball.prepare_launch()
             for ball_ in self.balls.sprites():
                 ball_.launching = True
+            
             ball_launch = threading.Thread(target=self.initiate_launch)
             ball_launch.start()
 
@@ -197,8 +210,8 @@ class board:
             if ball_.moving or ball_.launching:
                 self.balls_grounded = False
             for i in range(0, self.ball_row_length):
-                lower = measures.ys[i]   - ball.ball.speed - measures.radius - measures.step
-                upper = measures.ys[i+1] + ball.ball.speed + measures.radius + measures.step
+                lower = measures.ys[i]   - ball.ball.speed*self.step - measures.radius - measures.step
+                upper = measures.ys[i+1] + ball.ball.speed*self.step + measures.radius + measures.step
                 #O(1) lookup does not cost a lot as they are dictionaries
                 if lower <= ball_.center.y <= upper and ball_ not in self.ball_row[i].spritedict: 
                     self.ball_row[i].add(ball_)
@@ -216,12 +229,12 @@ class board:
             center = ball_.center
 
             #move foward 1 iteration (done so that the collisions are better)
-            center -= ball.ball.speed*ball_.vector
+            center -= ball.ball.speed*ball_.vector*self.step
 
             #rule out impossible collisions
             if center.x + measures.radius <= left or center.x - measures.radius >= right or center.y + measures.radius <= top \
                 or center.y - measures.radius >= bottom:
-                center += ball.ball.speed*ball_.vector #move back one iteration
+                center += ball.ball.speed*ball_.vector*self.step #move back one iteration
                 return None # exit the function
 
             #find the closest point
@@ -229,7 +242,7 @@ class board:
             difference = center - closest
 
             #move back 1 iteration
-            center += ball.ball.speed*ball_.vector
+            center += ball.ball.speed*ball_.vector*self.step
 
             #handle the collsion
             if difference.x**2 + difference.y**2 <= measures.radius**2:
@@ -243,10 +256,13 @@ class board:
                 #left/right
                 elif left - 1 <= closest.x <= left + 1 or right - 1 <= closest.x <= right + 1:
                     ball_.vector.x *= -1
+
+                #print("Collided with box")
         elif type(item) == Ball_Adder.ball_adder:
             if math.hypot(ball_.center.x - item.rect.center[0], ball_.center.y - item.rect.center[1]) < measures.radius + Ball_Adder.ball_adder.outer_radius:
                 self.balls.add(ball.ball(item.rect.center[0]))
                 item.handle_collision()
+                #print("Collided ball adder")
 
     def update_all_text(self):
         self.update_angle_text()
@@ -285,6 +301,7 @@ class board:
         event = threading.Event()
         event.set()
         for ball_ in self.balls.sprites():
+            time.sleep(0.8)
             event.wait(timeout=0.08)
             ball_.center = pyg.math.Vector2(ball.ball.terminus.x, ball.ball.terminus.y)
             ball_.launch()
@@ -309,7 +326,7 @@ class board:
             gfxdraw.aacircle(display_surface, int(initial_ball.x), int(initial_ball.y), measures.radius, (255,255,255))
             gfxdraw.filled_circle(display_surface, int(initial_ball.x), int(initial_ball.y), measures.radius, (255,255,255))
             initial_ball -= spacing*unit_vector
-            rect = pyg.Rect(0, 0, measures.radius, measures.radius)
+            rect = pyg.Rect(0, 0, measures.radius*2 + 1, measures.radius*2 + 1)
             rect.center = (int(initial_ball.x), int(initial_ball.y))
             rect_list.append(rect)
         return rect_list

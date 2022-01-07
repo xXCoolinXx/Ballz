@@ -44,7 +44,7 @@ def main():
                          board_instance.speed_button.left - close.left - close.regular.get_rect().width, measures.top_height)
 
     #Cache the functions to speed up the program
-    loop = board_instance.loop
+    loop = board_instance.loop_n
     draw = board_instance.draw
     close_update = close.update
 
@@ -58,8 +58,14 @@ def main():
     floor = math.floor
 
     fps = 60
+    last_rect_list = []
+
+    fill((33, 33, 33))
+    pyg.display.flip()
+
     while True:
         tick(fps) #keeps framerate at a maximum of 60
+        cfps = get_fps()
 
         #Updates the mouse events (don't need to check others)
         for event in get_event():
@@ -70,7 +76,7 @@ def main():
         #Draw
         fill((33, 33, 33))
 
-        print("FPS: ",  get_fps())
+        print("FPS: ",  cfps)
         rect_list = []
         rect_list += draw()
         close.draw()
@@ -78,7 +84,7 @@ def main():
 
         #Update everything
         #for i in range(0, board_instance.loop_count + floor((fps - get_fps()) / 20)): 
-        loop(1/fps)
+        loop(1/(fps if cfps == 0 else cfps))
 
         if close_update():
             if board_instance.balls_grounded and not board_instance.array_moving:
@@ -87,8 +93,10 @@ def main():
                 rect_list.append(blit(popup_message1, popup_rect1))
                 rect_list.append(blit(popup_message2, popup_rect2))
 
+        pyg.display.update(last_rect_list)
         pyg.display.update(rect_list)
-        pyg.display.flip()
+        last_rect_list = rect_list
+        #pyg.display.flip()
 
     board_instance.write_to_file() #Write to the file once the game is over 
 
