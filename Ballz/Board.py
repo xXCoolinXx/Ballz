@@ -217,7 +217,26 @@ class board:
                     self.ball_row[i].add(ball_)
                 elif ball_ in self.ball_row[i].spritedict:
                     self.ball_row[i].remove(ball_)
- 
+    
+    def ray_sort(ball_group):
+        velocity_dict = {}
+        for ball_ in ball_group:
+            vel = ball_.vector
+            if vel in velocity_dict:
+                velocity_dict[vel].append((ball_, False))
+            else:
+                velocity_dict[vel] = (ball_, False)
+        
+        for vel, balls in velocity_dict.items():
+            for a in balls:
+                a[1] = True
+                for b in balls:
+                    center1 = a.center
+                    center2 = b.center
+                    n = (center2 - center1) / vel #If on the same line, components should be equal
+                    #if n.x == n.y and :
+        
+
     def collision(self, ball_, item):
         """Just handles the collisions"""
         if type(item) == Box.box:
@@ -229,12 +248,12 @@ class board:
             center = ball_.center
 
             #move foward 1 iteration (done so that the collisions are better)
-            center -= ball.ball.speed*ball_.vector*self.step
+            #center -= ball.ball.speed*ball_.vector*self.step
 
             #rule out impossible collisions
             if center.x + measures.radius <= left or center.x - measures.radius >= right or center.y + measures.radius <= top \
                 or center.y - measures.radius >= bottom:
-                center += ball.ball.speed*ball_.vector*self.step #move back one iteration
+                #center += ball.ball.speed*ball_.vector*self.step #move back one iteration
                 return None # exit the function
 
             #find the closest point
@@ -242,20 +261,30 @@ class board:
             difference = center - closest
 
             #move back 1 iteration
-            center += ball.ball.speed*ball_.vector*self.step
+            #center += ball.ball.speed*ball_.vector*self.step
 
             #handle the collsion
             if difference.x**2 + difference.y**2 <= measures.radius**2:
                 item.handle_collision()
+                n = 0
+                while difference.x**2 + difference.y**2 <= measures.radius**2:
+                    n += 1
+                    ball_.center += ball.ball.speed*ball_.vector*self.step
+                    difference = center - closest
+                
+                #ball_.center -= ball.ball.speed*ball_.vector*self.step
+
                 #find the closest point again because otherwise weird stuff happens
-                closest = pointOfIntersect(item.rect.center, (item.rect.width, item.rect.height), center)
+                #closest = pointOfIntersect(item.rect.center, (item.rect.width, item.rect.height), center)
 
                 #top/bottom
                 if top - 1 <= closest.y <= top + 1 or bottom - 1 <= closest.y <= bottom + 1:
                     ball_.vector.y *= -1
                 #left/right
-                elif left - 1 <= closest.x <= left + 1 or right - 1 <= closest.x <= right + 1:
+                if left - 1 <= closest.x <= left + 1 or right - 1 <= closest.x <= right + 1:
                     ball_.vector.x *= -1
+                
+                ball_.center += ball.ball.speed*ball_.vector*self.step*n
 
                 #print("Collided with box")
         elif type(item) == Ball_Adder.ball_adder:

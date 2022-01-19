@@ -84,8 +84,8 @@ def main():
 
         #Update everything
         #for i in range(0, board_instance.loop_count + floor((fps - get_fps()) / 20)): 
-        loop(1/(fps if cfps == 0 else cfps))
-
+        loop(1/(2*(fps if cfps == 0 else cfps)))
+        loop(1/(2*(fps if cfps == 0 else cfps)))
         if close_update():
             if board_instance.balls_grounded and not board_instance.array_moving:
                 break
